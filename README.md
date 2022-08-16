@@ -1,7 +1,7 @@
 # racket project
 
-[![CI](https://github.com/dannypsnl/racket-project/actions/workflows/test.yml/badge.svg)](https://github.com/dannypsnl/racket-project/actions/workflows/test.yml)
-[![Coverage](https://badgen.net/https/dannypsnl.github.io/racket-project/coverage/badge.json)](https://dannypsnl.github.io/racket-project/coverage)
+[![CI](https://github.com/dannypsnl/minitt/actions/workflows/test.yml/badge.svg)](https://github.com/dannypsnl/minitt/actions/workflows/test.yml)
+[![Coverage](https://badgen.net/https/dannypsnl.github.io/minitt/coverage/badge.json)](https://dannypsnl.github.io/minitt/coverage)
 
 ### How to use
 
