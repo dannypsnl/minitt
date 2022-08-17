@@ -1,6 +1,6 @@
 #lang info
 (define collection "minitt")
-(define deps '("base"))
+(define deps '("base" "data-type"))
 (define build-deps '("rackunit-lib"
                      "scribble-lib" "racket-doc"
                      ; coverage
