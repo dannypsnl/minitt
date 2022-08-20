@@ -2,14 +2,14 @@
 (provide (all-defined-out))
 (require data-type)
 
-(define-type (GenericBranch T) (HashTable String T))
+(define-type (GBranch T) (HashTable String T))
 
 #|
 Surface AST
 |#
 (define-type AnonymousValue Val)
 
-(define-type Branch (GenericBranch E))
+(define-type Branch (GBranch E))
 
 (data Pat
       [Pair Pat Pat]
@@ -52,13 +52,13 @@ Surface AST
 #|
 Abstract AST
 |#
-(define-type Level Positive-Integer)
+(define-type Level Natural)
 
-(data (GenericTelescope V)
+(data (GTelescope V)
       [Nil]
-      [UpDec (GenericTelescope V) Decl]
-      [UpVar (GenericTelescope V) Pat Val])
-(define-type Telescope (GenericTelescope Val))
+      [UpDec (GTelescope V) Decl]
+      [UpVar (GTelescope V) Pat Val])
+(define-type Telescope (GTelescope Val))
 
 ;;; closure
 (data Clos
@@ -66,21 +66,21 @@ Abstract AST
       [Value Val]
       [Choice Clos String])
 
-(struct (E V) GenericCase
+(struct (E V) GCase
   ([expr : E]
-   [context : (GenericTelescope V)])
+   [context : (GTelescope V)])
   #:transparent)
-(define-type Case (GenericCase (U Val E) Val))
-(define-type CaseTree (GenericBranch Case))
+(define-type Case (GCase (U Val E) Val))
+(define-type CaseTree (GBranch Case))
 
-(data (GenericNeutral V)
+(data (GNeutral V)
       [Generated Natural]
-      [Application (GenericNeutral V) V]
-      [First (GenericNeutral V)]
-      [Second (GenericNeutral V)]
-      [Split (GenericBranch (GenericCase (U V E) V))
-             (GenericNeutral V)])
-(define-type Neutral (GenericNeutral Val))
+      [App (GNeutral V) V]
+      [First (GNeutral V)]
+      [Second (GNeutral V)]
+      [Split (GBranch (GCase (U V E) V))
+             (GNeutral V)])
+(define-type Neutral (GNeutral Val))
 
 ;;; value
 (data Val
@@ -94,26 +94,26 @@ Abstract AST
       [Constructor String Val]
       [Split CaseTree]
       [Sum CaseTree]
-      [Neutral Neutral])
+      [Neu Neutral])
 
 #|
 Normal form AST
 |#
-(define-type NormalCase (GenericCase (U NormE E) NormE))
-(define-type NormalCaseTree (GenericBranch NormalCase))
+(define-type NormalCase (GCase (U NE E) NE))
+(define-type NormalCaseTree (GBranch NormalCase))
 
-(define-type NormalNeutral (GenericNeutral NormE))
+(define-type NormalNeutral (GNeutral NE))
 
 ; normal expression
-(data NormE
-      [Lambda Natural NormE]
-      [Pair NormE NormE]
+(data NE
+      [Lambda Natural NE]
+      [Pair NE NE]
       [Unit]
       [One]
       [Type Level]
-      [Pi NormE Natural NormE]
-      [Sigma NormE Natural NormE]
-      [Constructor String NormE]
+      [Pi NE Natural NE]
+      [Sigma NE Natural NE]
+      [Constructor String NE]
       [Split NormalCaseTree]
       [Sum NormalCaseTree]
       [Neutral NormalNeutral])
