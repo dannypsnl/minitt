@@ -2,7 +2,7 @@
 (provide (all-defined-out))
 (require data-type)
 
-(define-type (GBranch T) (HashTable String T))
+(define-type (GBranch T) (HashTable Symbol T))
 
 #|
 Surface AST
@@ -14,7 +14,7 @@ Surface AST
 (data Pat
       [Pair Pat Pat]
       [Unit]
-      [Var String])
+      [Var Symbol])
 
 (struct Decl
   ([pattern : Pat]
@@ -34,7 +34,7 @@ Surface AST
       [One]
       [Type Level]
       [Void]
-      [Var String]
+      [Var Symbol]
       [Sum Branch]
       [Split Branch]
       [Merge E E]
@@ -45,7 +45,7 @@ Surface AST
       [Second E]
       [Application E E]
       [Pair E E]
-      [Constructor String E]
+      [Constructor Symbol E]
       [Constant Pat E E]
       [Declaration Decl E])
 
@@ -64,7 +64,7 @@ Abstract AST
 (data Clos
       [Abstraction Pat (Option Val) E Telescope]
       [Value Val]
-      [Choice Clos String])
+      [Choice Clos Symbol])
 
 (struct (E V) GCase
   ([expr : E]
@@ -74,7 +74,7 @@ Abstract AST
 (define-type CaseTree (GBranch Case))
 
 (data (GNeutral V)
-      [Generated Natural]
+      [Generated Symbol]
       [App (GNeutral V) V]
       [First (GNeutral V)]
       [Second (GNeutral V)]
@@ -91,7 +91,7 @@ Abstract AST
       [Pi Val Clos]
       [Sigma Val Clos]
       [Pair Val Val]
-      [Constructor String Val]
+      [Constructor Symbol Val]
       [Split CaseTree]
       [Sum CaseTree]
       [Neu Neutral])
@@ -113,7 +113,7 @@ Normal form AST
       [Type Level]
       [Pi NE Natural NE]
       [Sigma NE Natural NE]
-      [Constructor String NE]
+      [Constructor Symbol NE]
       [Split NormalCaseTree]
       [Sum NormalCaseTree]
       [Neutral NormalNeutral])
