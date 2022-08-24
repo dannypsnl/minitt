@@ -57,7 +57,7 @@ Abstract AST
 (data (GTelescope V) #:prefix Tele
       [Nil]
       [UpDec (GTelescope V) Decl]
-      [UpVar (GTelescope V) Pat Value])
+      [UpVar (GTelescope V) Pat V])
 (define-type Telescope (GTelescope Value))
 
 ;;; closure
@@ -104,16 +104,18 @@ Normal form AST
 
 (define-type NormalNeutral (GNeutral NormalExpr))
 
+(define-type NormalTelescope (GTelescope NormalExpr))
+
 ; normal expression
 (data NormalExpr #:prefix NE
-      [Lambda Natural NormalExpr]
+      [Lambda NormalExpr]
       [Pair NormalExpr NormalExpr]
       [Unit]
       [One]
       [Type Level]
-      [Pi NormalExpr Natural NormalExpr]
-      [Sigma NormalExpr Natural NormalExpr]
+      [Pi NormalExpr NormalExpr]
+      [Sigma NormalExpr NormalExpr]
       [Constructor Symbol NormalExpr]
       [Split NormalCaseTree]
       [Sum NormalCaseTree]
-      [Neutral NormalNeutral])
+      [Neu NormalNeutral])
