@@ -1,118 +1,118 @@
 #lang typed/racket
 (require "ast.rkt")
 
-(define-type Context (HashTable Symbol Val))
+(define-type Context (HashTable Symbol Value))
 
-(: lookup : Symbol Context -> Val)
+(: lookup : Symbol Context -> Value)
 (define (lookup x c) (hash-ref c x))
 
-(: extract-Pi : Val -> (Values Val Clos))
+(: extract-Pi : Value -> (Values Value Clos))
 (define (extract-Pi v)
   (match v
-    [(Val:Pi t g) (values t g)]
+    [(V:Pi t g) (values t g)]
     [else (error 'pi "cannot extract ~a" v)]))
 
-(: extract-Sigma : Val -> (Values Val Clos))
+(: extract-Sigma : Value -> (Values Value Clos))
 (define (extract-Sigma v)
   (match v
-    [(Val:Sigma t g) (values t g)]
+    [(V:Sigma t g) (values t g)]
     [else (error 'sigma "cannot extract ~a" v)]))
 
-(: Eval : E Telescope -> Val)
+(: Eval : Expr Telescope -> Value)
 (define (Eval e telescope)
   (match e))
 
-(: vfst : Val -> Val)
+(: vfst : Value -> Value)
 (define (vfst v)
   (match v
-    [(Val:Pair u1 _) u1]
-    [(Val:Neu k) (Val:Neu (GNeutral:First k))]
+    [(V:Pair u1 _) u1]
+    [(V:Neu k) (V:Neu (GN:First k))]
     [else (error 'vfst)]))
 
-(: vsnd : Val -> Val)
+(: vsnd : Value -> Value)
 (define (vsnd v)
   (match v
-    [(Val:Pair _ u2) u2]
-    [(Val:Neu k) (Val:Neu (GNeutral:Second k))]
+    [(V:Pair _ u2) u2]
+    [(V:Neu k) (V:Neu (GN:Second k))]
     [else (error 'vsnd)]))
 
-(: Inst : Clos Val -> Val)
+(: Inst : Clos Value -> Value)
 (define (Inst clos v)
   (match clos
-    [(Clos:Abstraction p opt-v e tele)
-     (Eval e (GTelescope:UpVar tele p v))]))
+    [(Cl:Abstraction p opt-v e tele)
+     (Eval e (Tele:UpVar tele p v))]))
 
-(: update-context : Context Pat Val Val -> Context)
+(: update-context : Context Pat Value Value -> Context)
 (define (update-context ctx pat v1 v2)
   (match (list pat v1)
     [(list (Pat:Unit) _) ctx]
     [(list (Pat:Var x) t) (hash-set ctx x t)]
-    [(list (Pat:Pair p1 p2) (Val:Sigma t g))
+    [(list (Pat:Pair p1 p2) (V:Sigma t g))
      (define new-ctx (update-context ctx p1 t (vfst v2)))
      (update-context new-ctx p2 (Inst g (vfst v2)) (vsnd v2))]
     [else (error 'update-context "p = ~a" pat)]))
 
-(: genV : -> Val)
-(define (genV) (Val:Neu (GNeutral:Generated (gensym))))
+(: genV : -> Value)
+(define (genV) (V:Neu (GN:Generated (gensym))))
 
-(: checkT : Telescope Context E -> Void)
+(: checkT : Telescope Context Expr -> Void)
 (define (checkT tele ctx e)
   (match e
     [(E:Pi (Typed p a) b)
      (checkT tele ctx a)
      (define new-ctx (update-context ctx p (Eval a tele) (genV)))
-     (checkT (GTelescope:UpVar tele p (genV)) new-ctx b)]
+     (checkT (Tele:UpVar tele p (genV)) new-ctx b)]
     [(E:Sigma (Typed p a) b) (checkT tele ctx (E:Pi (Typed p a) b))]
     [(E:Type l) (void)]
-    [a (check tele ctx a (Val:Type 0))]))
+    [a (check tele ctx a (V:Type 0))]))
 
-(: reduce-to-value : Case -> Val)
+(: reduce-to-value : Case -> Value)
 (define (reduce-to-value case)
   (define e (GCase-expr case))
-  (if (E? e)
+  (if (Expr? e)
       (Eval e (GCase-context case))
       e))
 
-(: readbackV : Val -> NE)
+(: readbackV : Value -> NormalExpr)
 (define (readbackV v)
   (match v))
 
-(: eq-normal-form : Val Val -> Void)
+(: eq-normal-form : Value Value -> Void)
 (define (eq-normal-form m1 m2)
   (define e1 (readbackV m1))
   (define e2 (readbackV m2))
   (unless (equal? e1 e2)
     (error 'eqnf "~a =/= ~a" e1 e2)))
 
-(: check : Telescope Context E Val -> Void)
+(: check : Telescope Context Expr Value -> Void)
 (define (check tele ctx e t)
   (match* (e t)
-    [((E:Lambda pat _ e) (Val:Pi t g))
+    [((E:Lambda pat _ e) (V:Pi t g))
      (define gen (genV))
      (define new-ctx (update-context ctx pat t gen))
-     (check (GTelescope:UpVar tele pat gen) new-ctx e (Inst g gen))]
-    [((E:Pair e1 e2) (Val:Sigma t g))
+     (check (Tele:UpVar tele pat gen) new-ctx e (Inst g gen))]
+    [((E:Pair e1 e2) (V:Sigma t g))
      (check tele ctx e1 t)
      (check tele ctx e2 (Inst g (Eval e1 tele)))]
-    [((E:Constructor constructor-name e) (Val:Sum constructors))
+    [((E:Constructor constructor-name e) (V:Sum constructors))
      (define c (hash-ref constructors constructor-name #f))
      (if c
          (check tele ctx e (reduce-to-value c))
          (error 'bad-constructor))]
-    [((E:Unit) (Val:One)) (void)]
-    [((E:One) (Val:Type 0)) (void)]
-    [((E:Pi (Typed pat a) b) (Val:Type 0))
-     (check tele ctx a (Val:Type 0))
+    [((E:Unit) (V:One)) (void)]
+    [((E:One) (V:Type 0)) (void)]
+    [((E:Pi (Typed pat a) b) (V:Type 0))
+     (check tele ctx a (V:Type 0))
      (define gen (genV))
      (define new-ctx (update-context ctx pat (Eval a tele) gen))
-     (check (GTelescope:UpVar tele pat gen) new-ctx b (Val:Type 0))]
-    [((E:Sigma (Typed pat a) b) (Val:Type 0))
-     (check tele ctx (E:Pi (Typed pat a) b) (Val:Type 0))]
-    [((E:Sum constructors) (Val:Type 0))
+     (check (Tele:UpVar tele pat gen) new-ctx b (V:Type 0))]
+    [((E:Sigma (Typed pat a) b) (V:Type 0))
+     (check tele ctx (E:Pi (Typed pat a) b) (V:Type 0))]
+    [((E:Sum constructors) (V:Type 0))
      (for ([(_ c) (in-hash constructors)])
-       (check tele ctx c (Val:Type 0)))]
+       (check tele ctx c (V:Type 0)))]
     [((E:Declaration d e) t) (define new-ctx (checkD tele ctx d))
-                             (check (GTelescope:UpDec tele d) new-ctx e t)]
+                             (check (Tele:UpDec tele d) new-ctx e t)]
     [(e t) (define t1 (checkI tele ctx e))
            (eq-normal-form t t1)]))
 
@@ -126,8 +126,8 @@
        (define t (Eval a tele))
        (define gen (genV))
        (define new-ctx (update-context ctx p t gen))
-       (check (GTelescope:UpVar tele p gen) new-ctx e t)
-       (define v (Eval e (GTelescope:UpDec tele d)))
+       (check (Tele:UpVar tele p gen) new-ctx e t)
+       (define v (Eval e (Tele:UpDec tele d)))
        (update-context ctx p t v)]
       [else
        (checkT tele ctx a)
@@ -135,7 +135,7 @@
        (check tele ctx e t)
        (update-context ctx p t (Eval e tele))])))
 
-(: checkI : Telescope Context E -> Val)
+(: checkI : Telescope Context Expr -> Value)
 (define (checkI telescope ctx e)
   (match e
     [(E:Var x) (lookup x ctx)]

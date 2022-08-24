@@ -7,11 +7,11 @@
 #|
 Surface AST
 |#
-(define-type AnonymousValue Val)
+(define-type AnonymousValue Value)
 
-(define-type Branch (GBranch E))
+(define-type Branch (GBranch Expr))
 
-(data Pat
+(data Pat #:prefix
       [Pair Pat Pat]
       [Unit]
       [Var Symbol])
@@ -19,17 +19,17 @@ Surface AST
 (struct Decl
   ([pattern : Pat]
    [prefix-parameters : (Vectorof Typed)]
-   [signature : E]
-   [body : E]
+   [signature : Expr]
+   [body : Expr]
    [recursive? : Boolean]) #:transparent)
 
 (struct Typed
   ([pattern : Pat]
-   [expression : E])
+   [expression : Expr])
   #:transparent)
 
 ;;; expression
-(data E
+(data Expr #:prefix E
       [Unit]
       [One]
       [Type Level]
@@ -37,61 +37,61 @@ Surface AST
       [Var Symbol]
       [Sum Branch]
       [Split Branch]
-      [Merge E E]
-      [Pi Typed E]
-      [Sigma Typed E]
-      [Lambda Pat (Option AnonymousValue) E]
-      [First E]
-      [Second E]
-      [Application E E]
-      [Pair E E]
-      [Constructor Symbol E]
-      [Constant Pat E E]
-      [Declaration Decl E])
+      [Merge Expr Expr]
+      [Pi Typed Expr]
+      [Sigma Typed Expr]
+      [Lambda Pat (Option AnonymousValue) Expr]
+      [First Expr]
+      [Second Expr]
+      [Application Expr Expr]
+      [Pair Expr Expr]
+      [Constructor Symbol Expr]
+      [Constant Pat Expr Expr]
+      [Declaration Decl Expr])
 
 #|
 Abstract AST
 |#
 (define-type Level Natural)
 
-(data (GTelescope V)
+(data (GTelescope V) #:prefix Tele
       [Nil]
       [UpDec (GTelescope V) Decl]
-      [UpVar (GTelescope V) Pat Val])
-(define-type Telescope (GTelescope Val))
+      [UpVar (GTelescope V) Pat Value])
+(define-type Telescope (GTelescope Value))
 
 ;;; closure
-(data Clos
-      [Abstraction Pat (Option Val) E Telescope]
-      [Value Val]
+(data Clos #:prefix Cl
+      [Abstraction Pat (Option Value) Expr Telescope]
+      [Value Value]
       [Choice Clos Symbol])
 
-(struct (E V) GCase
-  ([expr : E]
+(struct (Expr V) GCase
+  ([expr : Expr]
    [context : (GTelescope V)])
   #:transparent)
-(define-type Case (GCase (U Val E) Val))
+(define-type Case (GCase (U Value Expr) Value))
 (define-type CaseTree (GBranch Case))
 
-(data (GNeutral V)
+(data (GNeutral V) #:prefix GN
       [Generated Symbol]
       [App (GNeutral V) V]
       [First (GNeutral V)]
       [Second (GNeutral V)]
-      [Split (GBranch (GCase (U V E) V))
+      [Split (GBranch (GCase (U V Expr) V))
              (GNeutral V)])
-(define-type Neutral (GNeutral Val))
+(define-type Neutral (GNeutral Value))
 
 ;;; value
-(data Val
+(data Value #:prefix V
       [Lambda Clos]
       [Unit]
       [One]
       [Type Level]
-      [Pi Val Clos]
-      [Sigma Val Clos]
-      [Pair Val Val]
-      [Constructor Symbol Val]
+      [Pi Value Clos]
+      [Sigma Value Clos]
+      [Pair Value Value]
+      [Constructor Symbol Value]
       [Split CaseTree]
       [Sum CaseTree]
       [Neu Neutral])
@@ -99,21 +99,21 @@ Abstract AST
 #|
 Normal form AST
 |#
-(define-type NormalCase (GCase (U NE E) NE))
+(define-type NormalCase (GCase (U NormalExpr Expr) NormalExpr))
 (define-type NormalCaseTree (GBranch NormalCase))
 
-(define-type NormalNeutral (GNeutral NE))
+(define-type NormalNeutral (GNeutral NormalExpr))
 
 ; normal expression
-(data NE
-      [Lambda Natural NE]
-      [Pair NE NE]
+(data NormalExpr #:prefix NE
+      [Lambda Natural NormalExpr]
+      [Pair NormalExpr NormalExpr]
       [Unit]
       [One]
       [Type Level]
-      [Pi NE Natural NE]
-      [Sigma NE Natural NE]
-      [Constructor Symbol NE]
+      [Pi NormalExpr Natural NormalExpr]
+      [Sigma NormalExpr Natural NormalExpr]
+      [Constructor Symbol NormalExpr]
       [Split NormalCaseTree]
       [Sum NormalCaseTree]
       [Neutral NormalNeutral])
