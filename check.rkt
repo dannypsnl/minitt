@@ -1,59 +1,9 @@
 #lang typed/racket
-(require "ast.rkt"
+(provide check)
+(require "context.rkt"
+         "ast.rkt"
          "readback.rkt"
          "eval.rkt")
-
-(define-type Context (HashTable Symbol Value))
-
-(: lookup : Symbol Context -> Value)
-(define (lookup x c) (hash-ref c x))
-
-(: extract-Pi : Value -> (Values Value Clos))
-(define (extract-Pi v)
-  (match v
-    [(V:Pi t g) (values t g)]
-    [else (error 'pi "cannot extract ~a" v)]))
-
-(: extract-Sigma : Value -> (Values Value Clos))
-(define (extract-Sigma v)
-  (match v
-    [(V:Sigma t g) (values t g)]
-    [else (error 'sigma "cannot extract ~a" v)]))
-
-(: update-context : Context Pat Value Value -> Context)
-(define (update-context ctx pat v1 v2)
-  (match (list pat v1)
-    [(list (Pat:Unit) _) ctx]
-    [(list (Pat:Var x) t) (hash-set ctx x t)]
-    [(list (Pat:Pair p1 p2) (V:Sigma t g))
-     (define new-ctx (update-context ctx p1 t (vfst v2)))
-     (update-context new-ctx p2 (Inst g (vfst v2)) (vsnd v2))]
-    [else (error 'update-context "p = ~a" pat)]))
-
-(: checkT : Telescope Context Expr -> Void)
-(define (checkT tele ctx e)
-  (match e
-    [(E:Pi (Typed p a) b)
-     (checkT tele ctx a)
-     (define new-ctx (update-context ctx p (Eval a tele) (genV)))
-     (checkT (Tele:UpVar tele p (genV)) new-ctx b)]
-    [(E:Sigma (Typed p a) b) (checkT tele ctx (E:Pi (Typed p a) b))]
-    [(E:Type l) (void)]
-    [a (check tele ctx a (V:Type 0))]))
-
-(: reduce-to-value : Case -> Value)
-(define (reduce-to-value case)
-  (define e (GCase-expr case))
-  (if (Expr? e)
-      (Eval e (GCase-context case))
-      e))
-
-(: eq-normal-form : Value Value -> Void)
-(define (eq-normal-form m1 m2)
-  (define e1 (readback-value m1))
-  (define e2 (readback-value m2))
-  (unless (equal? e1 e2)
-    (error 'eqnf "~a =/= ~a" e1 e2)))
 
 (: check : Telescope Context Expr Value -> Void)
 (define (check tele ctx e t)
@@ -134,3 +84,40 @@
      (define-values (_ g) (extract-Sigma t))
      (Inst g (vfst (Eval e telescope)))]
     [e (error 'check-infer "cannot infer type of ~a" e)]))
+
+(: checkT : Telescope Context Expr -> Void)
+(define (checkT tele ctx e)
+  (match e
+    [(E:Pi (Typed p a) b)
+     (checkT tele ctx a)
+     (define new-ctx (update-context ctx p (Eval a tele) (genV)))
+     (checkT (Tele:UpVar tele p (genV)) new-ctx b)]
+    [(E:Sigma (Typed p a) b) (checkT tele ctx (E:Pi (Typed p a) b))]
+    [(E:Type l) (void)]
+    [a (check tele ctx a (V:Type 0))]))
+
+(: extract-Pi : Value -> (Values Value Clos))
+(define (extract-Pi v)
+  (match v
+    [(V:Pi t g) (values t g)]
+    [else (error 'pi "cannot extract ~a" v)]))
+
+(: extract-Sigma : Value -> (Values Value Clos))
+(define (extract-Sigma v)
+  (match v
+    [(V:Sigma t g) (values t g)]
+    [else (error 'sigma "cannot extract ~a" v)]))
+
+(: reduce-to-value : Case -> Value)
+(define (reduce-to-value case)
+  (define e (GCase-expr case))
+  (if (Expr? e)
+      (Eval e (GCase-context case))
+      e))
+
+(: eq-normal-form : Value Value -> Void)
+(define (eq-normal-form m1 m2)
+  (define e1 (readback-value m1))
+  (define e2 (readback-value m2))
+  (unless (equal? e1 e2)
+    (error 'eqnf "~a =/= ~a" e1 e2)))
