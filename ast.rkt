@@ -7,8 +7,6 @@
 #|
 Surface AST
 |#
-(define-type AnonymousValue Value)
-
 (define-type Branch (GBranch Expr))
 
 (data Pat #:prefix
@@ -40,7 +38,7 @@ Surface AST
       [Merge Expr Expr]
       [Pi Typed Expr]
       [Sigma Typed Expr]
-      [Lambda Pat (Option AnonymousValue) Expr]
+      [Lambda Pat (Option Value) Expr]
       [First Expr]
       [Second Expr]
       [Application Expr Expr]
@@ -66,8 +64,8 @@ Abstract AST
       [Value Value]
       [Choice Clos Symbol])
 
-(struct (Expr V) GCase
-  ([expr : Expr]
+(struct (E V) GCase
+  ([expr : E]
    [context : (GTelescope V)])
   #:transparent)
 (define-type Case (GCase (U Value Expr) Value))

@@ -20,20 +20,6 @@
     [(V:Sigma t g) (values t g)]
     [else (error 'sigma "cannot extract ~a" v)]))
 
-(: vfst : Value -> Value)
-(define (vfst v)
-  (match v
-    [(V:Pair u1 _) u1]
-    [(V:Neu k) (V:Neu (GN:First k))]
-    [else (error 'vfst)]))
-
-(: vsnd : Value -> Value)
-(define (vsnd v)
-  (match v
-    [(V:Pair _ u2) u2]
-    [(V:Neu k) (V:Neu (GN:Second k))]
-    [else (error 'vsnd)]))
-
 (: update-context : Context Pat Value Value -> Context)
 (define (update-context ctx pat v1 v2)
   (match (list pat v1)
@@ -84,6 +70,16 @@
      (if c
          (check tele ctx e (reduce-to-value c))
          (error 'bad-constructor))]
+    [((E:Split branches) (V:Pi (V:Sum sum-branches) closure))
+     (define keys (hash-keys branches))
+     (for ([(name branch) (in-hash sum-branches)])
+       (set! keys (remove name keys))
+       (define pattern-match (hash-ref branches name))
+       (define branch-value (reduce-to-value branch))
+       (check tele ctx pattern-match (V:Pi branch-value
+                                           (Cl:Choice closure name))))
+     (unless (empty? keys)
+       (error 'check-split))]
     [((E:Unit) (V:One)) (void)]
     [((E:One) (V:Type 0)) (void)]
     [((E:Pi (Typed pat a) b) (V:Type 0))
