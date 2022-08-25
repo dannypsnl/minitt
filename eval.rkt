@@ -17,7 +17,13 @@
     [(E:Second e) (vsnd (Eval e tele))]
     [(E:Application e1 e2) (app (Eval e1 tele) (Eval e2 tele))]
     [(E:Var x) (get-telescope tele x)]
-    ))
+    [(E:Pair e1 e2) (V:Pair (Eval e1 tele) (Eval e2 tele))]
+    [(E:Constructor c e1) (V:Constructor c (Eval e1 tele))]
+    [(E:Sum cas) (V:Sum (for/hash : CaseTree ([(name e) (in-hash cas)])
+                          (values name (GCase e tele))))]
+    [(E:Split ces) (V:Split (for/hash : CaseTree ([(name e) (in-hash ces)])
+                              (values name (GCase e tele))))]
+    [else (error 'eval "failed: ~a" e)]))
 
 (: app : Value Value -> Value)
 (define (app f v)
