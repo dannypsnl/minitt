@@ -42,13 +42,17 @@
     [((E:Sum constructors) (V:Type 0))
      (for ([(_ c) (in-hash constructors)])
        (check tele ctx c (V:Type 0)))]
-    [((E:Declaration d e) t) (define new-ctx (checkD tele ctx d))
+    [((E:Declaration d e) t) (define new-ctx (check-decl tele ctx d))
                              (check (Tele:UpDec tele d) new-ctx e t)]
-    [(e t) (define t1 (checkI tele ctx e))
+    [((E:Constant pat a e) t) (define t (Eval a tele))
+                              (define gen (genV))
+                              (define new-ctx (update-context ctx pat t gen))
+                              (check tele new-ctx e t)]
+    [(e t) (define t1 (check-infer tele ctx e))
            (eq-normal-form t t1)]))
 
-(: checkD : Telescope Context Decl -> Context)
-(define (checkD tele ctx d)
+(: check-decl : Telescope Context Decl -> Context)
+(define (check-decl tele ctx d)
   (let ([a (Decl-signature d)]
         [e (Decl-body d)]
         [p (Decl-pattern d)])
@@ -61,38 +65,40 @@
        (define v (Eval e (Tele:UpDec tele d)))
        (update-context ctx p t v)]
       [else
-       (checkT tele ctx a)
+       (check-type tele ctx a)
        (define t (Eval a tele))
        (check tele ctx e t)
        (update-context ctx p t (Eval e tele))])))
 
-(: checkI : Telescope Context Expr -> Value)
-(define (checkI telescope ctx e)
+(: check-infer : Telescope Context Expr -> Value)
+(define (check-infer telescope ctx e)
   (match e
     [(E:Var x) (lookup x ctx)]
+    [(E:Type level) (V:Type (add1 level))]
     [(E:Application e1 e2)
-     (define t1 (checkI telescope ctx e1))
+     (define t1 (check-infer telescope ctx e1))
      (define-values (t g) (extract-Pi t1))
      (check telescope ctx e2 t)
      (Inst g (Eval e2 telescope))]
     [(E:First e)
-     (define t (checkI telescope ctx e))
+     (define t (check-infer telescope ctx e))
      (define-values (a _) (extract-Sigma t))
      a]
     [(E:Second e)
-     (define t (checkI telescope ctx e))
+     (define t (check-infer telescope ctx e))
      (define-values (_ g) (extract-Sigma t))
      (Inst g (vfst (Eval e telescope)))]
     [e (error 'check-infer "cannot infer type of ~a" e)]))
 
-(: checkT : Telescope Context Expr -> Void)
-(define (checkT tele ctx e)
+; ensure the given expr is a type
+(: check-type : Telescope Context Expr -> Void)
+(define (check-type tele ctx e)
   (match e
     [(E:Pi (Typed p a) b)
-     (checkT tele ctx a)
+     (check-type tele ctx a)
      (define new-ctx (update-context ctx p (Eval a tele) (genV)))
-     (checkT (Tele:UpVar tele p (genV)) new-ctx b)]
-    [(E:Sigma (Typed p a) b) (checkT tele ctx (E:Pi (Typed p a) b))]
+     (check-type (Tele:UpVar tele p (genV)) new-ctx b)]
+    [(E:Sigma (Typed p a) b) (check-type tele ctx (E:Pi (Typed p a) b))]
     [(E:Type l) (void)]
     [a (check tele ctx a (V:Type 0))]))
 
